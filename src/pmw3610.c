@@ -1031,15 +1031,20 @@ static int pmw3610_pm_action(const struct device *dev, enum pm_device_action act
         k_work_cancel_delayable(&data->init_work);
         k_work_cancel(&data->trigger_work);
 
-        // Disable GPIO interrupt completely
+        // Remove normal interrupt callback
         gpio_pin_interrupt_configure_dt(&config->irq_gpio, GPIO_INT_DISABLE);
         gpio_remove_callback(config->irq_gpio.port, &data->irq_gpio_cb);
 
-        // Release IRQ pin to high-Z (input, no pull-up) to prevent back-feeding power
-        err = gpio_pin_configure_dt(&config->irq_gpio, GPIO_INPUT);
-        if (err) {
-            LOG_WRN("Failed to release IRQ pin: %d", err);
+        // Clear any pending motion data so MOT pin goes inactive
+        {
+            uint8_t clear_buf[PMW3610_BURST_SIZE];
+            motion_burst_read(dev, clear_buf, sizeof(clear_buf));
         }
+
+        // Configure IRQ as wake source for System OFF.
+        // GPIO SENSE (level-based) is the only wake mechanism in System OFF.
+        // The sensor stays powered and will assert MOT (low) on ball movement.
+        gpio_pin_interrupt_configure_dt(&config->irq_gpio, GPIO_INT_LEVEL_ACTIVE);
 
         // Release CS pin to high-Z (input) to prevent back-feeding power
         err = gpio_pin_configure_dt(&config->cs_gpio, GPIO_INPUT);
