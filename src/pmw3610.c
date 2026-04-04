@@ -422,7 +422,7 @@ static int set_downshift_time(const struct device *dev, uint8_t reg_addr, uint32
 static void set_interrupt(const struct device *dev, const bool en) {
     const struct pixart_config *config = dev->config;
     int ret = gpio_pin_interrupt_configure_dt(&config->irq_gpio,
-                                              en ? GPIO_INT_LEVEL_ACTIVE : GPIO_INT_DISABLE);
+                                              en ? GPIO_INT_EDGE_TO_ACTIVE : GPIO_INT_DISABLE);
     if (ret < 0) {
         LOG_ERR("can't set interrupt");
     }
