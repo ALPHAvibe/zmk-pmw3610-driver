@@ -844,7 +844,7 @@ static int pmw3610_report_data(const struct device *dev) {
     }
 #endif
 
-    if (x != 0 || y != 0) {
+    if (abs(x) + abs(y) > 1) {
         if (input_mode == MOVE || input_mode == SNIPE) {
             int32_t accel_x, accel_y;
             calculate_mouse_acceleration(x, y, data, &accel_x, &accel_y);
