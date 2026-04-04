@@ -546,14 +546,11 @@ static void pmw3610_async_init(struct k_work *work) {
         if (data->async_init_step == ASYNC_INIT_STEP_COUNT) {
             data->ready = true; // sensor is ready to work
             LOG_INF("PMW3610 initialized");
+            // Clear any pending motion data so MOT pin resets to inactive,
+            // ensuring the edge-triggered interrupt can detect the next motion.
+            uint8_t clear_buf[PMW3610_BURST_SIZE];
+            motion_burst_read(dev, clear_buf, sizeof(clear_buf));
             set_interrupt(dev, true);
-            // If MOT pin is already active (low), the edge-triggered interrupt
-            // won't fire since the transition already happened. Manually kick
-            // the work handler to read pending motion data and clear MOT.
-            const struct pixart_config *config = dev->config;
-            if (gpio_pin_get_dt(&config->irq_gpio)) {
-                k_work_submit(&data->trigger_work);
-            }
         } else {
             k_work_schedule(&data->init_work, K_MSEC(async_init_delay[data->async_init_step]));
         }
