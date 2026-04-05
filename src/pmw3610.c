@@ -546,11 +546,12 @@ static void pmw3610_async_init(struct k_work *work) {
         if (data->async_init_step == ASYNC_INIT_STEP_COUNT) {
             data->ready = true; // sensor is ready to work
             LOG_INF("PMW3610 initialized");
-            // Clear any pending motion data so MOT pin resets to inactive,
-            // ensuring the edge-triggered interrupt can detect the next motion.
-            uint8_t clear_buf[PMW3610_BURST_SIZE];
-            motion_burst_read(dev, clear_buf, sizeof(clear_buf));
             set_interrupt(dev, true);
+            // Always kick the work handler after enabling the interrupt.
+            // If MOT is already low (e.g. ball moved during wake), the
+            // edge-triggered interrupt won't fire. This ensures we read
+            // and clear any pending data so the next edge is detected.
+            k_work_submit(&data->trigger_work);
         } else {
             k_work_schedule(&data->init_work, K_MSEC(async_init_delay[data->async_init_step]));
         }
