@@ -849,7 +849,19 @@ static int pmw3610_report_data(const struct device *dev) {
     }
 #endif
 
-    if (abs(x) + abs(y) > 1) {
+    // Filter isolated single-pixel noise when ball has been still.
+    // During active tracking, pass all motion through for smooth slow movement.
+    static int64_t last_active_motion_time = 0;
+    int64_t motion_now = k_uptime_get();
+    bool recently_active = (motion_now - last_active_motion_time) < 500;
+    bool significant = abs(x) + abs(y) > 1;
+    bool any_motion = (x != 0 || y != 0);
+
+    if (significant) {
+        last_active_motion_time = motion_now;
+    }
+
+    if (significant || (any_motion && recently_active)) {
         if (input_mode == MOVE || input_mode == SNIPE) {
             int32_t accel_x, accel_y;
             calculate_mouse_acceleration(x, y, data, &accel_x, &accel_y);
