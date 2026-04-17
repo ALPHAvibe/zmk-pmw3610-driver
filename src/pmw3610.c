@@ -945,9 +945,17 @@ static void pmw3610_gpio_callback(const struct device *gpiob, struct gpio_callba
 static void pmw3610_work_callback(struct k_work *work) {
     struct pixart_data *data = CONTAINER_OF(work, struct pixart_data, trigger_work);
     const struct device *dev = data->dev;
+    const struct pixart_config *config = dev->config;
 
     pmw3610_report_data(dev);
     set_interrupt(dev, true);
+
+    // If MOT is still asserted after the burst read (e.g. sensor was in deep
+    // REST and has accumulated data, or new motion arrived during the read),
+    // the edge-triggered interrupt won't fire again. Resubmit to drain.
+    if (gpio_pin_get_dt(&config->irq_gpio)) {
+        k_work_submit(&data->trigger_work);
+    }
 }
 
 static int pmw3610_init_irq(const struct device *dev) {
